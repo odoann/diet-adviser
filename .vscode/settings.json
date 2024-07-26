@@ -1,5 +1,5 @@
 {
-    "tailwindCSS.includeLanguages": {
+  "tailwindCSS.includeLanguages": {
     "html": "html",
     "javascript": "javascript",
     "css": "css"
@@ -7,4 +7,5 @@
   "editor.quickSuggestions": {
     "strings": true
   },
+  "fiveServer.navigate": false
 }
