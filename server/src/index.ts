@@ -38,7 +38,7 @@ type RegisterValues = {
   password: string;
 };
 
-type LoginValues = Pick<RegisterValues, "email">;
+type LoginValues = Pick<RegisterValues, "email" | "password">;
 
 const sequelize = new Sequelize("bmi_db", "root", "", {
   host: "localhost",
@@ -85,14 +85,21 @@ app.get("/", async (c, next) => {
 });
 
 app.post("/register", async (c) => {
+  const sessionStore = c.get("session");
+  // let userSession = sessionStore.get("sid");
+
   const request_body = await c.req.json<RegisterValues>();
 
   if (!request_body) {
-    return c.json({
-      message:
-        "Please provide the request body in order to register an account.",
-      data: null,
-    });
+    return c.json(
+      {
+        message:
+          "Please provide the request body in order to register an account.",
+        data: null,
+        redirect: false,
+      },
+      404
+    );
   }
 
   const does_user_exist = await User.findOne({
@@ -102,10 +109,21 @@ app.post("/register", async (c) => {
   });
 
   if (does_user_exist) {
-    return c.json({
-      message: "You already have an account, please login.",
-      data: null,
-    });
+    sessionStore.set(
+      "sid",
+      JSON.stringify({
+        email: request_body.email,
+        password: request_body.password,
+      } as Pick<RegisterValues, "email" | "password">)
+    );
+    return c.json(
+      {
+        message: "You already have an account, please login.",
+        data: null,
+        redirect: false,
+      },
+      200
+    );
   }
 
   const new_record = await User.create({
@@ -115,20 +133,46 @@ app.post("/register", async (c) => {
     password: request_body.password,
   });
 
+  if (!new_record) {
+    return c.json(
+      {
+        message: "Could not save record",
+        data: [],
+        redirect: false,
+      },
+      404
+    );
+  }
+
+  sessionStore.set(
+    "sid",
+    JSON.stringify({
+      email: request_body.email,
+      password: request_body.password,
+    } as Pick<RegisterValues, "email" | "password">)
+  );
+
   return c.json({
-    message: "Registeration success.",
-    data: new_record,
+    message: "Registration success.",
+    data: [],
+    redirect: true,
   });
 });
 
 app.post("/login", async (c) => {
+  // const sessionStore = c.get("session");
+  // let userSession = sessionStore.get("sid");
   const request_body = await c.req.json<LoginValues>();
 
   if (!request_body) {
-    return c.json({
-      message: "Please provide the request body in order to login.",
-      data: null,
-    });
+    return c.json(
+      {
+        message: "Please provide the request body in order to login.",
+        data: null,
+        redirect: false,
+      },
+      404
+    );
   }
 
   const does_user_exist = await User.findOne({
@@ -138,19 +182,44 @@ app.post("/login", async (c) => {
   });
 
   if (!does_user_exist) {
-    return c.json({
-      message: "You could not be logged in, please register an account.",
-      data: null,
-    });
+    return c.json(
+      {
+        message: "You do not have an account, please register.",
+        data: null,
+        redirect: false,
+      },
+      404
+    );
   }
+
+  // sessionStore.set(
+  //   "sid",
+  //   JSON.stringify({
+  //     email: request_body.email,
+  //     password: request_body.password,
+  //   } as Pick<RegisterValues, "email" | "password">)
+  // );
 
   return c.json({
     message: "You logged in successfully.",
     data: does_user_exist,
+    redirect: true,
   });
 });
 
-app.get("/auth/bmi", async (c) => {
+app.get("/auth/bmi/:email", async (c) => {
+  const email = c.req.param("email");
+
+  const does_user_exist = await User.findOne({
+    where: {
+      email,
+    },
+  });
+
+  if (!does_user_exist) {
+    return c.redirect("/not-authorized");
+  }
+
   return c.html(
     html`
       <!DOCTYPE html>
@@ -290,6 +359,39 @@ app.get("/auth/bmi", async (c) => {
       </html>
     `
   );
+});
+
+app.get("/not-authorized", async (c) => {
+  return c.html(html`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Not Authorized</title>
+        <link
+          href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+          rel="stylesheet"
+        />
+      </head>
+      <body class="bg-gray-100 flex items-center justify-center h-screen">
+        <div class="bg-white p-8 rounded-lg shadow-md text-center">
+          <h1 class="text-4xl font-bold text-red-600 mb-4">
+            403 - Not Authorized
+          </h1>
+          <p class="text-lg text-gray-700 mb-6">
+            You do not have permission to view this page.
+          </p>
+          <a
+            href="/"
+            class="text-white bg-blue-500 hover:bg-blue-700 font-semibold py-2 px-4 rounded"
+          >
+            Go to Home
+          </a>
+        </div>
+      </body>
+    </html>
+  `);
 });
 
 console.log(`Server is running at url: http://localhost:${port}`);
