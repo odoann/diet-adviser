@@ -22,7 +22,42 @@
       </div>
 
       <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form class="space-y-6" action="#" method="POST" autocomplete="off">
+        <form class="space-y-4" action="#" method="POST" autocomplete="off">
+          <div>
+            <label
+              for="firstname"
+              class="block text-sm font-medium leading-6 text-gray-900"
+              >First name</label
+            >
+            <div class="mt-2">
+              <input
+                id="firstname"
+                name="firstname"
+                type="text"
+                required
+                placeholder="your email"
+                class="block pl-3 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              for="lastname"
+              class="block text-sm font-medium leading-6 text-gray-900"
+              >Last name</label
+            >
+            <div class="mt-2">
+              <input
+                id="lastname"
+                name="lastname"
+                type="text"
+                required
+                placeholder="your email"
+                class="block pl-3 w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              />
+            </div>
+          </div>
+
           <div>
             <label
               for="email"
@@ -48,9 +83,6 @@
                 class="block text-sm font-medium leading-6 text-gray-900"
                 >Password</label
               >
-              <!-- <div class="text-sm">
-              <a href="#" class="font-semibold text-indigo-600 hover:text-indigo-500">Forgot password?</a>
-            </div> -->
             </div>
             <div class="mt-2">
               <input
@@ -86,6 +118,7 @@
     </div>
 
     <script>
+      const BASE_URL = "http://localhost:3000";
       const form = document.querySelector("form");
 
       form.addEventListener("submit", async (e) => {
@@ -94,30 +127,44 @@
 
         let email = handler.get("email");
         let password = handler.get("password");
+        let firstname = handler.get("firstname");
+        let lastname = handler.get("lastname");
 
-        console.log(email);
-        console.log(password);
-        let data = await registerUser(email, password);
-        console.log("registered", data);
+        let data = await registerUser(email, password, firstname, lastname);
+        console.log("Was registered", data);
+
+        if (data && data.redirect) {
+          window.location.replace(`/pages/login-page.html`);
+        }
       });
 
-      async function registerUser(email, password) {
+      async function registerUser(email, password, firstname, lastname) {
         try {
           let req = await fetch(`${BASE_URL}/register`, {
             method: "POST",
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ firstname, lastname, email, password }),
             headers: {
               "Content-Type": "application/json",
             },
           });
 
           if (!req.ok) {
-            return false;
+            let res = await req.json();
+            return {
+              message: res.message,
+              data: res.data,
+              redirect: res.redirect,
+            };
           }
 
           return await req.json();
         } catch (error) {
           console.log(error.message);
+          return {
+            message: "",
+            data: [],
+            redirect: false,
+          };
         }
       }
     </script>

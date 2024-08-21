@@ -102,6 +102,11 @@
 
         let data = await loginUser(email, password);
         console.log("logged in", data);
+
+        if (data && data.redirect) {
+          location.replace(`${BASE_URL}/auth/bmi/${email}`);
+          // window.location.replace(`/pages/login-page.html`);
+        }
       });
 
       async function loginUser(email, password) {
@@ -115,12 +120,22 @@
           });
 
           if (!req.ok) {
-            return false;
+            let res = await req.json();
+            return {
+              message: res.message,
+              data: res.data,
+              redirect: res.redirect,
+            };
           }
 
           return await req.json();
         } catch (error) {
           console.log(error.message);
+          return {
+            message: "",
+            data: [],
+            redirect: false,
+          };
         }
       }
     </script>
